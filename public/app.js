@@ -1,0 +1,920 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+
+const respostaFirebaseConfig = await fetch("/api/firebase-config", { cache: "no-store" });
+if (!respostaFirebaseConfig.ok) {
+  throw new Error("Firebase Web não configurado no servidor.");
+}
+const firebaseConfig = await respostaFirebaseConfig.json();
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provedorGoogle = new GoogleAuthProvider();
+provedorGoogle.setCustomParameters({ prompt: "select_account" });
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+
+const el = {
+  telaLogin: $("#telaLogin"),
+  dashboard: $("#dashboard"),
+  areaUsuario: $("#areaUsuario"),
+  botaoLoginGoogle: $("#botaoLoginGoogle"),
+  botaoSair: $("#botaoSair"),
+  botaoLogo: $("#botaoLogo"),
+  mensagemLogin: $("#mensagemLogin"),
+  nomeUsuario: $("#nomeUsuario"),
+  emailUsuario: $("#emailUsuario"),
+  fotoUsuario: $("#fotoUsuario"),
+
+  paginaServidores: $("#paginaServidores"),
+  paginaHospedar: $("#paginaHospedar"),
+  paginaConfigServidor: $("#paginaConfigServidor"),
+  botaoAbrirHospedagem: $("#botaoAbrirHospedagem"),
+  voltarDaHospedagem: $("#voltarDaHospedagem"),
+  voltarDosDetalhes: $("#voltarDosDetalhes"),
+  listaServidores: $("#listaServidores"),
+  contadorHospedagens: $("#contadorHospedagens"),
+  contaResumo: $("#contaResumo"),
+  mensagemServidores: $("#mensagemServidores"),
+
+  nomeHospedagem: $("#nomeHospedagem"),
+  emailHospedagem: $("#emailHospedagem"),
+  fotoHospedagem: $("#fotoHospedagem"),
+  ownerFallback: $("#ownerFallback"),
+  formServidor: $("#formServidor"),
+  descricaoServidor: $("#descricaoServidor"),
+  contadorDescricao: $("#contadorDescricao"),
+  mensagemFormulario: $("#mensagemFormulario"),
+
+  tituloServidorSelecionado: $("#tituloServidorSelecionado"),
+  descricaoServidorSelecionado: $("#descricaoServidorSelecionado"),
+  idServidorSelecionado: $("#idServidorSelecionado"),
+  botaoStatusServidor: $("#botaoStatusServidor"),
+  photonServidorSelecionado: $("#photonServidorSelecionado"),
+  firebaseServidorSelecionado: $("#firebaseServidorSelecionado"),
+  configInicial: $("#configInicial"),
+
+  formConfiguracoes: $("#formConfiguracoes"),
+  tipoVisao: $("#tipoVisao"),
+  tempoSpawnItens: $("#tempoSpawnItens"),
+  checkListMembros: $("#checkListMembros"),
+  modoZumbis: $("#modoZumbis"),
+  modoJogo: $("#modoJogo"),
+  mensagemConfiguracoes: $("#mensagemConfiguracoes"),
+  estadoConfiguracoes: $("#estadoConfiguracoes"),
+  modoSenha: $("#modoSenha"),
+  grupoSenhaConfiguracao: $("#grupoSenhaConfiguracao"),
+  senhaServidor: $("#senhaServidor"),
+  ajudaSenhaConfiguracao: $("#ajudaSenhaConfiguracao"),
+
+  formEvento: $("#formEvento"),
+  tempoHelicrash: $("#tempoHelicrash"),
+  mensagemEvento: $("#mensagemEvento"),
+  estadoHelicrash: $("#estadoHelicrash"),
+
+  formAdmin: $("#formAdmin"),
+  nomeAdmin: $("#nomeAdmin"),
+  mensagemAdmin: $("#mensagemAdmin"),
+  listaAdmins: $("#listaAdmins"),
+  contadorAdmins: $("#contadorAdmins"),
+
+  formChecklist: $("#formChecklist"),
+  nomeChecklist: $("#nomeChecklist"),
+  mensagemChecklist: $("#mensagemChecklist"),
+  listaChecklist: $("#listaChecklist"),
+  contadorChecklist: $("#contadorChecklist")
+};
+
+let usuarioAtual = null;
+let minhasHospedagens = [];
+let servidorSelecionado = null;
+let configAtual = null;
+
+let configServidor = { gerais: null, temSenha: false, helicrash: null, admins: [], checklist: [] };
+
+el.botaoLoginGoogle.addEventListener("click", entrarComGoogle);
+el.botaoSair.addEventListener("click", sairDaConta);
+el.botaoLogo.addEventListener("click", () => usuarioAtual && mostrarMeusServidores());
+el.botaoAbrirHospedagem.addEventListener("click", mostrarHospedagem);
+el.voltarDaHospedagem.addEventListener("click", mostrarMeusServidores);
+el.voltarDosDetalhes.addEventListener("click", mostrarMeusServidores);
+el.botaoStatusServidor.addEventListener("click", alternarStatusServidor);
+el.formServidor.addEventListener("submit", criarHospedagem);
+el.formConfiguracoes.addEventListener("submit", salvarConfiguracoesRemotas);
+el.modoSenha.addEventListener("change", atualizarVisibilidadeSenhaConfiguracao);
+el.formEvento.addEventListener("submit", salvarHelicrashRemoto);
+el.formAdmin.addEventListener("submit", adicionarAdminRemoto);
+el.formChecklist.addEventListener("submit", adicionarChecklistRemota);
+
+el.descricaoServidor.addEventListener("input", () => {
+  el.contadorDescricao.textContent = el.descricaoServidor.value.length;
+});
+
+$$('.config-tab').forEach((botao) => {
+  botao.addEventListener("click", () => abrirConfig(botao.dataset.config));
+});
+
+onAuthStateChanged(auth, async (usuario) => {
+  usuarioAtual = usuario || null;
+  if (!usuarioAtual) {
+    mostrarLogin();
+    return;
+  }
+
+  preencherUsuario(usuarioAtual);
+  el.telaLogin.classList.add("hidden");
+  el.dashboard.classList.remove("hidden");
+  el.areaUsuario.classList.remove("hidden");
+  await mostrarMeusServidores();
+});
+
+async function entrarComGoogle() {
+  definirBotaoOcupado(el.botaoLoginGoogle, true, "Abrindo Google...");
+  ocultarMensagem(el.mensagemLogin);
+  try {
+    await signInWithPopup(auth, provedorGoogle);
+  } catch (erro) {
+    mostrarMensagem(el.mensagemLogin, traduzirErroFirebase(erro), "error");
+  } finally {
+    definirBotaoOcupado(el.botaoLoginGoogle, false, "Entrar com Google");
+  }
+}
+
+async function sairDaConta() {
+  try { await signOut(auth); } catch (erro) { console.error(erro); }
+}
+
+function mostrarLogin() {
+  usuarioAtual = null;
+  servidorSelecionado = null;
+  el.telaLogin.classList.remove("hidden");
+  el.dashboard.classList.add("hidden");
+  el.areaUsuario.classList.add("hidden");
+}
+
+function preencherUsuario(usuario) {
+  const nome = usuario.displayName || "Usuário";
+  const email = usuario.email || "";
+  const foto = usuario.photoURL || "";
+  const inicial = nome.trim().charAt(0).toUpperCase() || "U";
+
+  el.nomeUsuario.textContent = nome;
+  el.emailUsuario.textContent = email;
+  el.contaResumo.textContent = email || nome;
+  el.nomeHospedagem.textContent = nome;
+  el.emailHospedagem.textContent = email;
+  el.ownerFallback.textContent = inicial;
+  preencherFoto(el.fotoUsuario, foto);
+  preencherFoto(el.fotoHospedagem, foto, el.ownerFallback);
+}
+
+function preencherFoto(img, url, fallback = null) {
+  if (!url) {
+    img.removeAttribute("src");
+    img.classList.add("hidden");
+    if (fallback) fallback.classList.remove("hidden");
+    return;
+  }
+  img.src = url;
+  img.classList.remove("hidden");
+  if (fallback) fallback.classList.add("hidden");
+}
+
+function trocarPagina(pagina) {
+  [el.paginaServidores, el.paginaHospedar, el.paginaConfigServidor].forEach((p) => p.classList.add("hidden"));
+  pagina.classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function mostrarMeusServidores() {
+  servidorSelecionado = null;
+  configAtual = null;
+  trocarPagina(el.paginaServidores);
+  await carregarMinhasHospedagens();
+}
+
+function mostrarHospedagem() {
+  ocultarMensagem(el.mensagemFormulario);
+  trocarPagina(el.paginaHospedar);
+}
+
+async function carregarMinhasHospedagens() {
+  if (!usuarioAtual) return;
+  el.listaServidores.innerHTML = `
+    <div class="empty-state">
+      <div class="loading-dot"></div>
+      <strong>Carregando seus servidores...</strong>
+      <span>Consultando os servidores vinculados à sua conta.</span>
+    </div>`;
+  ocultarMensagem(el.mensagemServidores);
+
+  try {
+    const resposta = await fetchAutenticado('/api/minhas-hospedagens');
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    minhasHospedagens = Array.isArray(dados?.hospedagens) ? dados.hospedagens : [];
+    el.contadorHospedagens.textContent = minhasHospedagens.length;
+    renderizarServidores();
+  } catch (erro) {
+    minhasHospedagens = [];
+    el.contadorHospedagens.textContent = "0";
+    el.listaServidores.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">!</div>
+        <strong>Não foi possível carregar</strong>
+        <span>${escapeHtml(erro.message || "Erro ao carregar hospedagens.")}</span>
+      </div>`;
+  }
+}
+
+function renderizarServidores() {
+  if (!minhasHospedagens.length) {
+    el.listaServidores.innerHTML = `
+      <div class="empty-state server-empty">
+        <div class="empty-icon">▣</div>
+        <strong>Nenhum servidor hospedado</strong>
+        <span>Use o botão “Hospedar servidor” para cadastrar o primeiro.</span>
+      </div>`;
+    return;
+  }
+
+  el.listaServidores.innerHTML = "";
+  minhasHospedagens.forEach((servidor) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "server-card";
+    card.innerHTML = `
+      <div class="server-card-top">
+        <div class="server-icon">DZ</div>
+        <span class="server-status"><i></i> Hospedado</span>
+      </div>
+      <strong>${escapeHtml(servidor.nome || "Servidor sem nome")}</strong>
+      <p>${escapeHtml(servidor.descricao || "Sem descrição")}</p>
+      <div class="server-card-footer">
+        <span>ID: ${escapeHtml(encurtarId(servidor.id))}</span>
+        <b>Abrir configurações →</b>
+      </div>`;
+    card.addEventListener("click", () => abrirServidor(servidor.id));
+    el.listaServidores.append(card);
+  });
+}
+
+async function abrirServidor(serverId) {
+  if (!serverId) return;
+  ocultarMensagem(el.mensagemServidores);
+
+  try {
+    const resposta = await fetchAutenticado(`/api/hospedagens/${encodeURIComponent(serverId)}`);
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    servidorSelecionado = dados.hospedagem;
+    configServidor = { gerais: null, temSenha: false, helicrash: null, admins: [], checklist: [] };
+    preencherServidorSelecionado();
+    trocarPagina(el.paginaConfigServidor);
+    abrirConfig(null);
+    await carregarConfigServidor();
+  } catch (erro) {
+    mostrarMensagem(el.mensagemServidores, erro.message || "Não foi possível abrir este servidor.", "error");
+  }
+}
+
+function preencherServidorSelecionado() {
+  const s = servidorSelecionado;
+  if (!s) return;
+  el.tituloServidorSelecionado.textContent = s.nome || "Servidor";
+  el.descricaoServidorSelecionado.textContent = s.descricao || "";
+  el.idServidorSelecionado.textContent = s.id || "—";
+  el.photonServidorSelecionado.textContent = s.photonAppId || "—";
+  el.firebaseServidorSelecionado.textContent = s.urlFirebase || "—";
+  renderizarConfigServidor();
+}
+
+function abrirConfig(nome) {
+  configAtual = nome || null;
+  $$('.config-tab').forEach((b) => b.classList.toggle("active", b.dataset.config === configAtual));
+  $$('.config-panel').forEach((p) => p.classList.add("hidden"));
+  el.configInicial.classList.toggle("hidden", !!configAtual);
+  if (configAtual) $(`#config-${configAtual}`)?.classList.remove("hidden");
+  renderizarConfigServidor();
+}
+
+async function criarHospedagem(evento) {
+  evento.preventDefault();
+  if (!usuarioAtual) return mostrarLogin();
+
+  const servidor = {
+    nome: $("#nomeServidor").value.trim(),
+    descricao: $("#descricaoServidor").value.trim(),
+    photonAppId: $("#photonAppId").value.trim(),
+    urlFirebase: $("#databaseUrl").value.trim()
+  };
+
+  const erro = validarDadosServidor(servidor);
+  if (erro) return mostrarMensagem(el.mensagemFormulario, erro, "error");
+
+  const botao = el.formServidor.querySelector('button[type="submit"]');
+  definirBotaoOcupado(botao, true, "Hospedando...");
+  ocultarMensagem(el.mensagemFormulario);
+
+  try {
+    const resposta = await fetchAutenticado('/api/hospedagens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(servidor)
+    });
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    el.formServidor.reset();
+    el.contadorDescricao.textContent = "0";
+    mostrarMensagem(el.mensagemFormulario, "Servidor hospedado com sucesso.", "success");
+
+    await carregarMinhasHospedagens();
+    await abrirServidor(dados.serverId);
+  } catch (erroBackend) {
+    mostrarMensagem(el.mensagemFormulario, erroBackend.message || "Não foi possível hospedar o servidor.", "error");
+  } finally {
+    definirBotaoOcupado(botao, false, "Hospedar servidor");
+  }
+}
+
+function validarDadosServidor(servidor) {
+  if (!servidor.nome) return "Informe o nome do servidor.";
+  if (!servidor.descricao) return "Informe a descrição do servidor.";
+  if (!/^https:\/\/.+firebaseio\.com\/?$/i.test(servidor.urlFirebase) &&
+      !/^https:\/\/.+firebasedatabase\.app\/?$/i.test(servidor.urlFirebase)) {
+    return "Informe uma URL válida do Firebase Realtime Database.";
+  }
+  if (servidor.photonAppId.length < 10) return "Informe o Photon App ID.";
+  return "";
+}
+
+async function carregarConfigServidor() {
+  if (!servidorSelecionado?.id) return;
+
+  ocultarMensagem(el.mensagemConfiguracoes);
+  ocultarMensagem(el.mensagemEvento);
+  ocultarMensagem(el.mensagemAdmin);
+  ocultarMensagem(el.mensagemChecklist);
+
+  el.estadoConfiguracoes.innerHTML = `
+    <div class="loading-dot"></div>
+    <strong>Carregando configurações...</strong>
+    <span>Lendo os dados salvos no Firebase deste servidor.</span>`;
+
+  el.estadoHelicrash.innerHTML = `
+    <div class="loading-dot"></div>
+    <strong>Carregando evento...</strong>
+    <span>Lendo os dados salvos no Firebase deste servidor.</span>`;
+  el.listaAdmins.innerHTML = `
+    <div class="empty-state compact-state">
+      <div class="loading-dot"></div>
+      <strong>Carregando admins...</strong>
+      <span>Lendo os dados salvos no Firebase deste servidor.</span>
+    </div>`;
+  el.listaChecklist.innerHTML = `
+    <div class="empty-state compact-state">
+      <div class="loading-dot"></div>
+      <strong>Carregando CheckList...</strong>
+      <span>Lendo os membros permitidos neste servidor.</span>
+    </div>`;
+
+  try {
+    const resposta = await fetchAutenticado(
+      `/api/hospedagens/${encodeURIComponent(servidorSelecionado.id)}/configuracao`
+    );
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    configServidor = {
+      gerais: dados?.gerais && typeof dados.gerais === "object" ? dados.gerais : null,
+      temSenha: dados?.temSenha === true,
+      helicrash: dados?.helicrash || null,
+      admins: Array.isArray(dados?.admins) ? dados.admins : [],
+      checklist: Array.isArray(dados?.checklist) ? dados.checklist : []
+    };
+    renderizarConfigServidor();
+  } catch (erro) {
+    configServidor = { gerais: null, temSenha: false, helicrash: null, admins: [], checklist: [] };
+    renderizarConfigServidor();
+    const texto = erro.message || "Não foi possível acessar o Firebase deste servidor.";
+    mostrarMensagem(el.mensagemConfiguracoes, texto, "error");
+    mostrarMensagem(el.mensagemEvento, texto, "error");
+    mostrarMensagem(el.mensagemAdmin, texto, "error");
+    mostrarMensagem(el.mensagemChecklist, texto, "error");
+  }
+}
+
+function renderizarBotaoStatusServidor(online) {
+  const botao = el.botaoStatusServidor;
+  if (!botao) return;
+
+  botao.classList.remove("online", "offline", "loading");
+
+  if (online === null) {
+    botao.disabled = true;
+    botao.classList.add("loading");
+    botao.textContent = "CARREGANDO...";
+    return;
+  }
+
+  botao.disabled = false;
+  botao.classList.add(online ? "online" : "offline");
+  botao.textContent = online ? "● ONLINE" : "● OFFLINE";
+  botao.title = online
+    ? "Clique para deixar o servidor offline"
+    : "Clique para deixar o servidor online";
+}
+
+async function alternarStatusServidor() {
+  if (!servidorSelecionado?.id || !configServidor?.gerais) return;
+
+  const atual = configServidor.gerais.servidorOnline !== false;
+  const novoStatus = !atual;
+  const botao = el.botaoStatusServidor;
+
+  botao.disabled = true;
+  botao.textContent = novoStatus ? "ATIVANDO..." : "DESATIVANDO...";
+
+  try {
+    const resposta = await fetchAutenticado(
+      `/api/hospedagens/${encodeURIComponent(servidorSelecionado.id)}/status-servidor`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ servidorOnline: novoStatus })
+      }
+    );
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    configServidor.gerais.servidorOnline = novoStatus;
+    renderizarConfigServidor();
+  } catch (erro) {
+    renderizarBotaoStatusServidor(atual);
+    mostrarMensagem(
+      el.mensagemConfiguracoes,
+      erro.message || "Não foi possível alterar o status do servidor.",
+      "error"
+    );
+  }
+}
+
+async function salvarConfiguracoesRemotas(evento) {
+  evento.preventDefault();
+  if (!servidorSelecionado?.id) return;
+
+  const tipoVisao = el.tipoVisao.value;
+  const tempoSpawnItensMinutos = Number(el.tempoSpawnItens.value);
+  const checkListMembros = el.checkListMembros.value === "true";
+  const comZumbis = el.modoZumbis.value === "true";
+  const servidorOnline = configServidor?.gerais?.servidorOnline !== false;
+  const modoJogo = el.modoJogo.value;
+  const necessitaSenha = el.modoSenha.value === "true";
+  const senha = el.senhaServidor.value.trim();
+
+  if (!["PrimeiraPessoa", "TerceiraPessoa"].includes(tipoVisao)) {
+    return mostrarMensagem(el.mensagemConfiguracoes, "Escolha um tipo de visão válido.", "error");
+  }
+
+  if (!Number.isInteger(tempoSpawnItensMinutos) || tempoSpawnItensMinutos < 1 || tempoSpawnItensMinutos > 1440) {
+    return mostrarMensagem(el.mensagemConfiguracoes, "Informe um tempo de spawn entre 1 e 1440 minutos.", "error");
+  }
+
+  if (!["PVP", "PVE"].includes(modoJogo)) {
+    return mostrarMensagem(el.mensagemConfiguracoes, "Escolha PvP ou PvE.", "error");
+  }
+
+  if (necessitaSenha && !configServidor.temSenha && (senha.length < 4 || senha.length > 32)) {
+    return mostrarMensagem(el.mensagemConfiguracoes, "Defina uma senha entre 4 e 32 caracteres para ativar a proteção.", "error");
+  }
+
+  if (necessitaSenha && senha.length > 0 && (senha.length < 4 || senha.length > 32)) {
+    return mostrarMensagem(el.mensagemConfiguracoes, "A senha deve ter entre 4 e 32 caracteres.", "error");
+  }
+
+  const botao = el.formConfiguracoes.querySelector('button[type="submit"]');
+  definirBotaoOcupado(botao, true, "Salvando...");
+  ocultarMensagem(el.mensagemConfiguracoes);
+
+  try {
+    const resposta = await fetchAutenticado(
+      `/api/hospedagens/${encodeURIComponent(servidorSelecionado.id)}/configuracoes-gerais`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipoVisao, tempoSpawnItensMinutos, checkListMembros, comZumbis, servidorOnline, modoJogo })
+      }
+    );
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    configServidor.gerais = dados?.configuracoes || { tipoVisao, tempoSpawnItensMinutos, checkListMembros, comZumbis, servidorOnline, modoJogo };
+
+    if (necessitaSenha) {
+      if (!configServidor.temSenha || senha.length > 0) {
+        const respostaSenha = await fetchAutenticado(
+          `/api/hospedagens/${encodeURIComponent(servidorSelecionado.id)}/senha`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ senha })
+          }
+        );
+        const dadosSenha = await lerJsonSeguro(respostaSenha);
+        if (!respostaSenha.ok) throw new Error(dadosSenha?.mensagem || `Erro HTTP ${respostaSenha.status}`);
+        configServidor.temSenha = true;
+      } else {
+        configServidor.temSenha = true;
+      }
+    } else {
+      if (configServidor.temSenha) {
+        const respostaSemSenha = await fetchAutenticado(
+          `/api/hospedagens/${encodeURIComponent(servidorSelecionado.id)}/senha`,
+          { method: "DELETE" }
+        );
+        const dadosSemSenha = await lerJsonSeguro(respostaSemSenha);
+        if (!respostaSemSenha.ok) throw new Error(dadosSemSenha?.mensagem || `Erro HTTP ${respostaSemSenha.status}`);
+      }
+      configServidor.temSenha = false;
+    }
+
+    el.senhaServidor.value = "";
+    mostrarMensagem(el.mensagemConfiguracoes, "Configurações salvas no Firebase deste servidor.", "success");
+    renderizarConfigServidor();
+    await carregarConfigServidor();
+  } catch (erro) {
+    mostrarMensagem(el.mensagemConfiguracoes, erro.message || "Não foi possível salvar as configurações.", "error");
+  } finally {
+    definirBotaoOcupado(botao, false, "Salvar configurações");
+  }
+}
+
+
+async function salvarHelicrashRemoto(evento) {
+  evento.preventDefault();
+  if (!servidorSelecionado?.id) return;
+
+  const tempo = Number(el.tempoHelicrash.value);
+  if (![5, 10, 20].includes(tempo)) {
+    return mostrarMensagem(el.mensagemEvento, "Escolha 5, 10 ou 20 minutos.", "error");
+  }
+
+  const botao = el.formEvento.querySelector('button[type="submit"]');
+  definirBotaoOcupado(botao, true, "Salvando...");
+  ocultarMensagem(el.mensagemEvento);
+
+  try {
+    const resposta = await fetchAutenticado(
+      `/api/hospedagens/${encodeURIComponent(servidorSelecionado.id)}/eventos/helicrash`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intervaloMinutos: tempo })
+      }
+    );
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    configServidor.helicrash = dados?.helicrash || { ativo: true, intervaloMinutos: tempo };
+    mostrarMensagem(el.mensagemEvento, `Helicrash salvo no Firebase deste servidor: ${tempo} minutos.`, "success");
+    renderizarConfigServidor();
+    await carregarConfigServidor();
+  } catch (erro) {
+    mostrarMensagem(el.mensagemEvento, erro.message || "Não foi possível salvar o Helicrash.", "error");
+  } finally {
+    definirBotaoOcupado(botao, false, "Salvar Helicrash");
+  }
+}
+
+async function adicionarAdminRemoto(evento) {
+  evento.preventDefault();
+  if (!servidorSelecionado?.id) return;
+
+  const nick = el.nomeAdmin.value.trim();
+  if (!nick) return mostrarMensagem(el.mensagemAdmin, "Informe o nick do administrador.", "error");
+
+  const jaExiste = configServidor.admins.some((x) => x.toLowerCase() === nick.toLowerCase());
+  if (jaExiste) return mostrarMensagem(el.mensagemAdmin, "Esse nick já está na lista.", "error");
+
+  const botao = el.formAdmin.querySelector('button[type="submit"]');
+  definirBotaoOcupado(botao, true, "Adicionando...");
+  ocultarMensagem(el.mensagemAdmin);
+
+  try {
+    const resposta = await fetchAutenticado(
+      `/api/hospedagens/${encodeURIComponent(servidorSelecionado.id)}/admins`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nick })
+      }
+    );
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    configServidor.admins.push(dados?.nick || nick);
+    el.formAdmin.reset();
+    mostrarMensagem(el.mensagemAdmin, `Admin ${nick} salvo no Firebase deste servidor.`, "success");
+    renderizarConfigServidor();
+    await carregarConfigServidor();
+  } catch (erro) {
+    mostrarMensagem(el.mensagemAdmin, erro.message || "Não foi possível adicionar o admin.", "error");
+  } finally {
+    definirBotaoOcupado(botao, false, "Adicionar admin");
+  }
+}
+
+async function removerAdminRemoto(nick, botao) {
+  if (!servidorSelecionado?.id || !nick) return;
+  definirBotaoOcupado(botao, true, "Removendo...");
+  ocultarMensagem(el.mensagemAdmin);
+
+  try {
+    const resposta = await fetchAutenticado(
+      `/api/hospedagens/${encodeURIComponent(servidorSelecionado.id)}/admins/${encodeURIComponent(nick)}`,
+      { method: "DELETE" }
+    );
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    configServidor.admins = configServidor.admins.filter((x) => x !== nick);
+    mostrarMensagem(el.mensagemAdmin, `Admin ${nick} removido do Firebase deste servidor.`, "success");
+    renderizarConfigServidor();
+    await carregarConfigServidor();
+  } catch (erro) {
+    mostrarMensagem(el.mensagemAdmin, erro.message || "Não foi possível remover o admin.", "error");
+    definirBotaoOcupado(botao, false, "Remover");
+  }
+}
+
+async function adicionarChecklistRemota(evento) {
+  evento.preventDefault();
+  if (!servidorSelecionado?.id) return;
+
+  const nick = el.nomeChecklist.value.trim();
+  if (!nick) return mostrarMensagem(el.mensagemChecklist, "Informe o nick do membro.", "error");
+
+  const jaExiste = configServidor.checklist.some((x) => x.toLowerCase() === nick.toLowerCase());
+  if (jaExiste) return mostrarMensagem(el.mensagemChecklist, "Esse nick já está na CheckList.", "error");
+
+  const botao = el.formChecklist.querySelector('button[type="submit"]');
+  definirBotaoOcupado(botao, true, "Adicionando...");
+  ocultarMensagem(el.mensagemChecklist);
+
+  try {
+    const resposta = await fetchAutenticado(
+      `/api/hospedagens/${encodeURIComponent(servidorSelecionado.id)}/checklist`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nick })
+      }
+    );
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    configServidor.checklist.push(dados?.nick || nick);
+    el.formChecklist.reset();
+    mostrarMensagem(el.mensagemChecklist, `${nick} adicionado à CheckList deste servidor.`, "success");
+    renderizarConfigServidor();
+    await carregarConfigServidor();
+  } catch (erro) {
+    mostrarMensagem(el.mensagemChecklist, erro.message || "Não foi possível adicionar o membro.", "error");
+  } finally {
+    definirBotaoOcupado(botao, false, "Adicionar à CheckList");
+  }
+}
+
+async function removerChecklistRemota(nick, botao) {
+  if (!servidorSelecionado?.id || !nick) return;
+  definirBotaoOcupado(botao, true, "Removendo...");
+  ocultarMensagem(el.mensagemChecklist);
+
+  try {
+    const resposta = await fetchAutenticado(
+      `/api/hospedagens/${encodeURIComponent(servidorSelecionado.id)}/checklist/${encodeURIComponent(nick)}`,
+      { method: "DELETE" }
+    );
+    const dados = await lerJsonSeguro(resposta);
+    if (!resposta.ok) throw new Error(dados?.mensagem || `Erro HTTP ${resposta.status}`);
+
+    configServidor.checklist = configServidor.checklist.filter((x) => x !== nick);
+    mostrarMensagem(el.mensagemChecklist, `${nick} removido da CheckList deste servidor.`, "success");
+    renderizarConfigServidor();
+    await carregarConfigServidor();
+  } catch (erro) {
+    mostrarMensagem(el.mensagemChecklist, erro.message || "Não foi possível remover o membro.", "error");
+    definirBotaoOcupado(botao, false, "Remover");
+  }
+}
+
+function atualizarVisibilidadeSenhaConfiguracao() {
+  const necessitaSenha = el.modoSenha.value === "true";
+  el.grupoSenhaConfiguracao.classList.toggle("hidden", !necessitaSenha);
+
+  if (necessitaSenha) {
+    el.ajudaSenhaConfiguracao.textContent = configServidor.temSenha
+      ? "Esse servidor já tem senha. Digite uma nova senha somente se quiser redefinir."
+      : "Crie uma senha de 4 a 32 caracteres para o servidor.";
+    el.senhaServidor.placeholder = configServidor.temSenha
+      ? "Digite uma nova senha se quiser redefinir"
+      : "Digite uma senha de 4 a 32 caracteres";
+  } else {
+    el.senhaServidor.value = "";
+  }
+}
+
+function renderizarConfigServidor() {
+  const gerais = configServidor?.gerais;
+  const tipoVisao = gerais?.tipoVisao;
+  const tempoSpawnItensMinutos = Number(gerais?.tempoSpawnItensMinutos);
+  const checkListMembros = gerais?.checkListMembros === true;
+  const comZumbis = gerais?.comZumbis !== false;
+  const servidorOnline = gerais?.servidorOnline !== false;
+  const modoJogo = ["PVP", "PVE"].includes(gerais?.modoJogo) ? gerais.modoJogo : "PVP";
+  const temSenha = configServidor?.temSenha === true;
+
+  renderizarBotaoStatusServidor(gerais ? servidorOnline : null);
+
+  if (["PrimeiraPessoa", "TerceiraPessoa"].includes(tipoVisao) && Number.isInteger(tempoSpawnItensMinutos) && tempoSpawnItensMinutos > 0) {
+    el.tipoVisao.value = tipoVisao;
+    el.tempoSpawnItens.value = String(tempoSpawnItensMinutos);
+    el.checkListMembros.value = checkListMembros ? "true" : "false";
+    el.modoZumbis.value = comZumbis ? "true" : "false";
+    el.modoJogo.value = modoJogo;
+    const textoVisao = tipoVisao === "PrimeiraPessoa" ? "Somente primeira pessoa" : "Terceira pessoa";
+    const textoLista = checkListMembros ? "Check List Membros ativada" : "Check List Membros desativada";
+    const textoZumbis = comZumbis ? "Com zumbis" : "Sem zumbis";
+    const textoStatus = servidorOnline ? "Online" : "Offline";
+    const textoModo = modoJogo === "PVE" ? "PvE" : "PvP";
+    el.estadoConfiguracoes.innerHTML = `
+      <div class="event-status-icon">✓</div>
+      <strong>Configurações salvas</strong>
+      <span>${textoStatus} • ${textoModo} • ${textoVisao} • ${textoZumbis} • Itens a cada ${tempoSpawnItensMinutos} minutos • ${textoLista} • ${temSenha ? "Necessita senha" : "Sem senha"}.</span>`;
+  } else {
+    el.estadoConfiguracoes.innerHTML = `
+      <div class="empty-icon">⚙</div>
+      <strong>Não configurado</strong>
+      <span>Escolha o tipo de visão, modo de jogo, zumbis, spawn, checklist e senha.</span>`;
+  }
+
+  el.modoSenha.value = temSenha ? "true" : "false";
+  atualizarVisibilidadeSenhaConfiguracao();
+
+  const helicrash = configServidor?.helicrash;
+  const intervalo = Number(helicrash?.intervaloMinutos);
+
+  if ([5, 10, 20].includes(intervalo)) {
+    el.estadoHelicrash.innerHTML = `
+      <div class="event-status-icon">✓</div>
+      <strong>Helicrash configurado</strong>
+      <span>Spawn a cada ${intervalo} minutos.</span>`;
+    el.tempoHelicrash.value = String(intervalo);
+  } else {
+    el.estadoHelicrash.innerHTML = `
+      <div class="empty-icon">◫</div>
+      <strong>Não configurado</strong>
+      <span>Escolha 5, 10 ou 20 minutos.</span>`;
+  }
+
+  const admins = Array.isArray(configServidor?.admins) ? configServidor.admins : [];
+  el.contadorAdmins.textContent = admins.length;
+  if (!admins.length) {
+    el.listaAdmins.innerHTML = `
+      <div class="empty-state compact-state">
+        <div class="empty-icon">♟</div>
+        <strong>Nenhum admin adicionado</strong>
+        <span>Os nicks salvos no servidor aparecerão aqui.</span>
+      </div>`;
+  } else {
+    el.listaAdmins.innerHTML = "";
+    admins.forEach((nick) => {
+      const item = document.createElement("article");
+      item.className = "admin-item";
+
+      const avatar = document.createElement("div");
+      avatar.className = "mini-avatar";
+      avatar.textContent = nick.charAt(0).toUpperCase() || "A";
+
+      const nome = document.createElement("strong");
+      nome.textContent = nick;
+
+      const remover = document.createElement("button");
+      remover.type = "button";
+      remover.className = "button danger mini";
+      remover.textContent = "Remover";
+      remover.addEventListener("click", () => removerAdminRemoto(nick, remover));
+
+      const texto = document.createElement("div");
+      texto.className = "admin-copy";
+      texto.append(nome);
+
+      item.append(avatar, texto, remover);
+      el.listaAdmins.append(item);
+    });
+  }
+
+  const checklist = Array.isArray(configServidor?.checklist) ? configServidor.checklist : [];
+  el.contadorChecklist.textContent = checklist.length;
+  if (!checklist.length) {
+    el.listaChecklist.innerHTML = `
+      <div class="empty-state compact-state">
+        <div class="empty-icon">✓</div>
+        <strong>Nenhum membro na CheckList</strong>
+        <span>Adicione os nicks que poderão entrar quando a lista estiver ativada.</span>
+      </div>`;
+  } else {
+    el.listaChecklist.innerHTML = "";
+    checklist.forEach((nick) => {
+      const item = document.createElement("article");
+      item.className = "admin-item";
+
+      const avatar = document.createElement("div");
+      avatar.className = "mini-avatar";
+      avatar.textContent = nick.charAt(0).toUpperCase() || "M";
+
+      const texto = document.createElement("div");
+      texto.className = "admin-copy";
+      const nome = document.createElement("strong");
+      nome.textContent = nick;
+      const subtitulo = document.createElement("span");
+      subtitulo.textContent = "Permitido para conexão";
+      texto.append(nome, subtitulo);
+
+      const remover = document.createElement("button");
+      remover.type = "button";
+      remover.className = "button danger mini";
+      remover.textContent = "Remover";
+      remover.addEventListener("click", () => removerChecklistRemota(nick, remover));
+
+      item.append(avatar, texto, remover);
+      el.listaChecklist.append(item);
+    });
+  }
+
+}
+
+async function fetchAutenticado(url, opcoes = {}) {
+  if (!usuarioAtual) throw new Error('Faça login novamente.');
+  const token = await usuarioAtual.getIdToken(true);
+  const headers = new Headers(opcoes.headers || {});
+  headers.set('Authorization', `Bearer ${token}`);
+  return fetch(url, { ...opcoes, headers });
+}
+
+async function lerJsonSeguro(resposta) {
+  try { return await resposta.json(); } catch (_) { return null; }
+}
+
+function definirBotaoOcupado(botao, ocupado, texto) {
+  botao.disabled = ocupado;
+  const span = botao.querySelector("span");
+  if (span) span.textContent = texto;
+  else botao.textContent = texto;
+}
+
+function mostrarMensagem(elemento, texto, tipo = "neutral") {
+  elemento.textContent = texto;
+  elemento.className = `message ${tipo}`;
+}
+
+function ocultarMensagem(elemento) {
+  elemento.textContent = "";
+  elemento.className = "message hidden";
+}
+
+function traduzirErroFirebase(erro) {
+  const codigo = erro?.code || "";
+  const mensagens = {
+    "auth/popup-closed-by-user": "A janela do Google foi fechada antes de concluir o login.",
+    "auth/cancelled-popup-request": "A tentativa anterior de login foi cancelada.",
+    "auth/popup-blocked": "O navegador bloqueou a janela do Google. Libere pop-ups para localhost.",
+    "auth/unauthorized-domain": "localhost não está autorizado no Firebase Authentication.",
+    "auth/network-request-failed": "Falha de internet ao conectar com o Google."
+  };
+  return mensagens[codigo] || `Não foi possível entrar com o Google${codigo ? ` (${codigo})` : ""}.`;
+}
+
+function encurtarId(id) {
+  if (!id) return "—";
+  return id.length > 15 ? `${id.slice(0, 8)}…${id.slice(-5)}` : id;
+}
+
+function escapeHtml(valor) {
+  return String(valor ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
