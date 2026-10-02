@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>DayZombi — Hospedagem de Servidores</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="background" aria-hidden="true"></div>
+
+  <main class="app-shell">
+    <header class="topbar">
+      <button id="botaoLogo" class="brand brand-button" type="button" aria-label="Ir para meus servidores">
+        <div class="brand-mark">DZ</div>
+        <div class="brand-copy">
+          <p class="eyebrow">DAYZOMBI</p>
+          <h1>Hospedagem de Servidores</h1>
+        </div>
+      </button>
+
+      <div id="areaUsuario" class="user-area hidden">
+        <img id="fotoUsuario" class="user-photo hidden" alt="Foto da conta Google">
+        <div class="user-copy">
+          <strong id="nomeUsuario">Usuário</strong>
+          <span id="emailUsuario"></span>
+        </div>
+        <button id="botaoPainelAfiliado" class="button ghost small hidden" type="button">Painel do afiliado</button>
+        <button id="botaoPainelSaquesAdmin" class="button ghost small hidden" type="button">Saques ADM</button>
+        <button id="botaoSair" class="button ghost small" type="button">Sair</button>
+      </div>
+    </header>
+
+    <section id="telaLogin" class="login-wrap">
+      <div class="login-card">
+        <div class="login-brand-row">
+          <div class="login-lock">DZ</div>
+          <div>
+            <p class="eyebrow">ACESSO SEGURO</p>
+            <strong>DAYZOMBI</strong>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <p class="eyebrow">PAINEL DE HOSPEDAGEM</p>
+        <h2>Faça login primeiro</h2>
+        <p class="muted login-text">Entre com sua conta Google para visualizar e administrar somente os servidores vinculados à sua conta.</p>
+
+        <button id="botaoLoginGoogle" class="button primary large google-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4" d="M21.6 12.23c0-.72-.06-1.25-.2-1.8H12v3.42h5.52a4.72 4.72 0 0 1-2.05 3.1v2.22h3.31c1.94-1.79 2.82-4.42 2.82-6.94Z"/>
+            <path fill="#34A853" d="M12 22c2.7 0 4.97-.89 6.63-2.42l-3.31-2.22c-.92.62-2.1.98-3.32.98-2.6 0-4.81-1.76-5.6-4.12H2.98v2.29A10 10 0 0 0 12 22Z"/>
+            <path fill="#FBBC05" d="M6.4 14.22A6.02 6.02 0 0 1 6.08 12c0-.77.13-1.52.32-2.22V7.49H2.98A10 10 0 0 0 2 12c0 1.61.38 3.13.98 4.51l3.42-2.29Z"/>
+            <path fill="#EA4335" d="M12 5.66c1.47 0 2.78.5 3.82 1.49l2.87-2.87A9.63 9.63 0 0 0 12 2a10 10 0 0 0-9.02 5.49L6.4 9.78C7.19 7.42 9.4 5.66 12 5.66Z"/>
+          </svg>
+          <span>Entrar com Google</span>
+        </button>
+        <div id="mensagemLogin" class="message hidden"></div>
+      </div>
+    </section>
+
+    <section id="dashboard" class="dashboard hidden">
+      <!-- MEUS SERVIDORES -->
+      <section id="paginaServidores" class="page-panel">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">PAINEL DA CONTA</p>
+            <h2>Meus servidores</h2>
+            <p class="muted">Selecione um servidor hospedado para abrir as configurações dele.</p>
+          </div>
+          <button id="botaoAbrirHospedagem" class="button primary create-button" type="button">+ Hospedar servidor</button>
+        </div>
+
+        <section id="mercadoPagoHostingCard" class="mp-hosting-card hidden" aria-label="Comprar Código de Hospedagem Mensal">
+          <div class="mp-hosting-copy">
+            <span class="mp-hosting-badge">MERCADO PAGO • BRASIL</span>
+            <h3>Ative sua hospedagem por 30 dias</h3>
+            <p>Compre o Código de Hospedagem Mensal e libere a criação de 1 servidor nesta conta.</p>
+          </div>
+          <div class="mp-hosting-action">
+            <strong id="precoMercadoPago">R$ 0,50</strong>
+            <button id="botaoComprarCodigoMercadoPago" class="button primary large" type="button">
+              Comprar código
+            </button>
+          </div>
+          <div id="mensagemMercadoPago" class="message hidden mp-hosting-message"></div>
+        </section>
+
+        <div class="summary-row">
+          <article class="summary-card">
+            <span>Hospedagens</span>
+            <strong id="contadorHospedagens">0</strong>
+          </article>
+          <article class="summary-card wide">
+            <span>Conta</span>
+            <strong id="contaResumo">Conectada</strong>
+          </article>
+        </div>
+
+        <div id="mensagemServidores" class="message hidden"></div>
+        <div id="listaServidores" class="server-grid">
+          <div class="empty-state">
+            <div class="empty-icon">▣</div>
+            <strong>Carregando seus servidores...</strong>
+            <span>Aguarde alguns segundos.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAINEL DO AFILIADO -->
+      <section id="paginaAfiliado" class="page-panel hidden">
+        <button id="voltarDoAfiliado" class="back-link" type="button">← Meus servidores</button>
+
+        <div class="page-heading compact-heading affiliate-page-heading">
+          <div>
+            <p class="eyebrow">ÁREA DO VENDEDOR</p>
+            <h2>Painel do afiliado</h2>
+            <p class="muted">Acompanhe vendas confirmadas, comissão e saldo da sua carteira.</p>
+          </div>
+          <span class="section-badge">AFILIADO ATIVO</span>
+        </div>
+
+        <div id="mensagemAfiliado" class="message hidden"></div>
+
+        <div class="affiliate-profile-card">
+          <div>
+            <span>CÓDIGO DE VENDAS</span>
+            <strong id="codigoPainelAfiliado">—</strong>
+          </div>
+          <div>
+            <span>COMISSÃO</span>
+            <strong id="comissaoPainelAfiliado">0%</strong>
+          </div>
+          <div>
+            <span>DESCONTO DO CLIENTE</span>
+            <strong id="descontoPainelAfiliado">0%</strong>
+          </div>
+        </div>
+
+        <div class="affiliate-stats-grid">
+          <article class="affiliate-stat-card">
+            <span>Vendas confirmadas</span>
+            <strong id="vendasPainelAfiliado">0</strong>
+          </article>
+          <article class="affiliate-stat-card">
+            <span>Valor vendido</span>
+            <strong id="valorVendidoPainelAfiliado">R$ 0,00</strong>
+          </article>
+          <article class="affiliate-stat-card emphasis">
+            <span>Saldo disponível</span>
+            <strong id="saldoDisponivelPainelAfiliado">R$ 0,00</strong>
+          </article>
+          <article class="affiliate-stat-card">
+            <span>Saldo pendente</span>
+            <strong id="saldoPendentePainelAfiliado">R$ 0,00</strong>
+          </article>
+          <article class="affiliate-stat-card">
+            <span>Comissão total</span>
+            <strong id="comissaoTotalPainelAfiliado">R$ 0,00</strong>
+          </article>
+          <article class="affiliate-stat-card">
+            <span>Total sacado</span>
+            <strong id="totalSacadoPainelAfiliado">R$ 0,00</strong>
+          </article>
+        </div>
+
+        <section class="content-card affiliate-withdraw-card">
+          <div class="section-heading">
+            <div>
+              <h3>Carteira e saque Pix</h3>
+              <p class="muted">Cadastre sua chave Pix e solicite o saque do saldo disponível.</p>
+            </div>
+            <span id="statusPixAfiliado" class="section-badge">PIX NÃO CADASTRADO</span>
+          </div>
+
+          <div class="affiliate-withdraw-grid">
+            <div class="affiliate-wallet-panel">
+              <span>SALDO DISPONÍVEL</span>
+              <strong id="saldoSaqueAfiliado">R$ 0,00</strong>
+              <small id="saqueMinimoAfiliado">Saque mínimo: R$ 0,01</small>
+            </div>
+
+            <div class="affiliate-pix-form">
+              <div class="field">
+                <label for="tipoPixAfiliado">Tipo da chave Pix</label>
+                <select id="tipoPixAfiliado">
+                  <option value="EMAIL">E-mail</option>
+                  <option value="PHONE">Telefone</option>
+                  <option value="CPF">CPF</option>
+                  <option value="CNPJ">CNPJ</option>
+                  <option value="PIX_CODE">Chave aleatória</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="chavePixAfiliado">Chave Pix</label>
+                <input id="chavePixAfiliado" type="text" maxlength="120" placeholder="Digite sua chave Pix" autocomplete="off">
+              </div>
+
+              <button id="botaoSalvarPixAfiliado" class="button secondary full" type="button">Salvar chave Pix</button>
+            </div>
+          </div>
+
+          <div class="affiliate-withdraw-action">
+            <div class="field">
+              <label for="valorSaqueAfiliado">Valor do saque</label>
+              <input id="valorSaqueAfiliado" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00">
+            </div>
+            <button id="botaoSacarAfiliado" class="button primary large" type="button">Sacar</button>
+          </div>
+
+          <div id="mensagemSaqueAfiliado" class="message hidden"></div>
+
+          <div class="affiliate-withdraw-history">
+            <div class="section-heading compact-section-heading">
+              <div>
+                <h4>Últimos saques</h4>
+                <p class="muted">Solicitações reservam o valor imediatamente para evitar saque duplicado.</p>
+              </div>
+            </div>
+            <div id="listaSaquesAfiliado" class="affiliate-withdraw-list">
+              <div class="empty-state compact-state">
+                <strong>Nenhum saque solicitado</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="content-card affiliate-sales-card">
+          <div class="section-heading">
+            <div>
+              <h3>Vendas recentes</h3>
+              <p class="muted">A comissão só entra depois que o Mercado Pago confirma o pagamento.</p>
+            </div>
+          </div>
+          <div id="listaVendasAfiliado" class="affiliate-sales-list">
+            <div class="empty-state">
+              <div class="loading-dot"></div>
+              <strong>Carregando vendas...</strong>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- PAINEL ADMINISTRATIVO DE SAQUES -->
+      <section id="paginaSaquesAdmin" class="page-panel hidden">
+        <button id="voltarDosSaquesAdmin" class="back-link" type="button">← Meus servidores</button>
+
+        <div class="page-heading compact-heading affiliate-page-heading">
+          <div>
+            <p class="eyebrow">ADMINISTRAÇÃO</p>
+            <h2>Saques de afiliados</h2>
+            <p class="muted">Confira as solicitações, faça o Pix manualmente e marque como pago somente depois da transferência.</p>
+          </div>
+          <span class="section-badge active-badge">ACESSO ADM</span>
+        </div>
+
+        <div id="mensagemSaquesAdmin" class="message hidden"></div>
+
+        <section class="content-card admin-withdraw-card">
+          <div class="section-heading">
+            <div>
+              <h3>Solicitações pendentes</h3>
+              <p class="muted">O valor já está reservado da carteira do afiliado enquanto a solicitação estiver pendente.</p>
+            </div>
+            <button id="botaoAtualizarSaquesAdmin" class="button secondary" type="button">Atualizar</button>
+          </div>
+          <div id="listaSaquesPendentesAdmin" class="admin-withdraw-list">
+            <div class="empty-state"><strong>Carregando solicitações...</strong></div>
+          </div>
+        </section>
+
+        <section class="content-card admin-withdraw-card">
+          <div class="section-heading">
+            <div>
+              <h3>Histórico</h3>
+              <p class="muted">Saques já marcados como pagos ou recusados.</p>
+            </div>
+          </div>
+          <div id="listaHistoricoSaquesAdmin" class="admin-withdraw-list">
+            <div class="empty-state compact-state"><strong>Nenhum histórico ainda</strong></div>
+          </div>
+        </section>
+      </section>
+
+      <!-- HOSPEDAR NOVO SERVIDOR -->
+      <section id="paginaHospedar" class="page-panel hidden">
+        <div class="page-heading compact-heading">
+          <div>
+            <button id="voltarDaHospedagem" class="back-link" type="button">← Meus servidores</button>
+            <p class="eyebrow">NOVA HOSPEDAGEM</p>
+            <h2>Hospedar servidor</h2>
+            <p class="muted">Cadastre os dados necessários para localizar e conectar ao servidor.</p>
+          </div>
+        </div>
+
+        <div class="content-card form-card">
+          <div class="owner-card">
+            <img id="fotoHospedagem" class="owner-photo hidden" alt="Foto do proprietário">
+            <div class="owner-fallback" id="ownerFallback">U</div>
+            <div class="owner-copy">
+              <small>HOSPEDANDO COMO</small>
+              <strong id="nomeHospedagem"></strong>
+              <span id="emailHospedagem"></span>
+            </div>
+          </div>
+
+          <form id="formServidor" autocomplete="off">
+            <div class="field">
+              <label for="nomeServidor">Nome do servidor</label>
+              <input id="nomeServidor" type="text" maxlength="60" placeholder="Ex.: Brasil Survival #01" required>
+            </div>
+
+            <div class="field">
+              <label for="descricaoServidor">Descrição</label>
+              <textarea id="descricaoServidor" maxlength="300" placeholder="Descreva o servidor..." required></textarea>
+              <small><span id="contadorDescricao">0</span>/300</small>
+            </div>
+
+            <div class="field">
+              <label for="databaseUrl">URL do Firebase Realtime Database</label>
+              <div class="secret-input-wrap">
+                <input
+                  id="databaseUrl"
+                  type="password"
+                  placeholder="https://seu-projeto-default-rtdb.firebaseio.com/"
+                  spellcheck="false"
+                  required
+                >
+                <button
+                  id="botaoOlhoDatabaseUrl"
+                  class="secret-toggle"
+                  type="button"
+                  aria-label="Mostrar URL do Firebase"
+                  aria-pressed="false"
+                  title="Mostrar URL do Firebase"
+                >
+                  <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                    <circle cx="12" cy="12" r="2.5"></circle>
+                  </svg>
+                  <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 3l18 18"></path>
+                    <path d="M10.6 6.2A10.7 10.7 0 0 1 12 6c6.5 0 10 6 10 6a16.6 16.6 0 0 1-3 3.7"></path>
+                    <path d="M6.2 6.2C3.5 8.1 2 12 2 12s3.5 6 10 6a10.8 10.8 0 0 0 3.2-.5"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="photonAppId">Photon PUN 2 App ID</label>
+              <div class="secret-input-wrap">
+                <input
+                  id="photonAppId"
+                  type="password"
+                  maxlength="100"
+                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  spellcheck="false"
+                  required
+                >
+                <button
+                  id="botaoOlhoPhotonHospedagem"
+                  class="secret-toggle"
+                  type="button"
+                  aria-label="Mostrar Photon App ID"
+                  aria-pressed="false"
+                  title="Mostrar Photon App ID"
+                >
+                  <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                    <circle cx="12" cy="12" r="2.5"></circle>
+                  </svg>
+                  <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 3l18 18"></path>
+                    <path d="M10.6 6.2A10.7 10.7 0 0 1 12 6c6.5 0 10 6 10 6a16.6 16.6 0 0 1-3 3.7"></path>
+                    <path d="M6.2 6.2C3.5 8.1 2 12 2 12s3.5 6 10 6a10.8 10.8 0 0 0 3.2-.5"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div id="mensagemFormulario" class="message hidden"></div>
+            <button class="button primary large full" type="submit">Hospedar servidor</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- CONFIGURAÇÕES DE UM SERVIDOR -->
+      <section id="paginaConfigServidor" class="page-panel hidden">
+        <div class="page-heading server-heading">
+          <div>
+            <button id="voltarDosDetalhes" class="back-link" type="button">← Meus servidores</button>
+            <p class="eyebrow">SERVIDOR SELECIONADO</p>
+            <h2 id="tituloServidorSelecionado">Servidor</h2>
+            <p id="descricaoServidorSelecionado" class="muted"></p>
+          </div>
+          <div class="server-side-controls">
+            <div class="server-id-box">
+              <span>ID DO SERVIDOR</span>
+              <strong id="idServidorSelecionado">—</strong>
+            </div>
+            <button id="botaoStatusServidor" class="server-status-toggle loading" type="button" disabled>
+              CARREGANDO...
+            </button>
+          </div>
+        </div>
+
+        <section id="formConexaoServidor" class="server-info-card connection-editor" aria-label="Dados de conexão do servidor">
+          <div class="connection-field photon-field">
+            <div class="connection-label-row">
+              <label for="photonServidorSelecionado">Photon App ID</label>
+              <span class="connection-badge">Conexão</span>
+            </div>
+
+            <div class="secret-input-wrap secret-input-actions">
+              <input
+                id="photonServidorSelecionado"
+                type="password"
+                maxlength="100"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                spellcheck="false"
+                readonly
+                aria-label="Photon App ID"
+              >
+
+              <div class="secret-action-buttons">
+                <button
+                  id="botaoOlhoPhoton"
+                  class="secret-toggle"
+                  type="button"
+                  aria-label="Mostrar Photon App ID"
+                  aria-pressed="false"
+                  title="Mostrar Photon App ID"
+                >
+                  <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                    <circle cx="12" cy="12" r="2.5"></circle>
+                  </svg>
+                  <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 3l18 18"></path>
+                    <path d="M10.6 6.2A10.7 10.7 0 0 1 12 6c6.5 0 10 6 10 6a16.6 16.6 0 0 1-3 3.7"></path>
+                    <path d="M6.2 6.2C3.5 8.1 2 12 2 12s3.5 6 10 6a10.8 10.8 0 0 0 3.2-.5"></path>
+                  </svg>
+                </button>
+
+                <button
+                  id="botaoEditarPhoton"
+                  class="edit-secret-button"
+                  type="button"
+                  aria-label="Editar Photon App ID"
+                  title="Editar Photon App ID"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <small>Salvo no Firebase indicado em <b>DADOS/AppId Photon</b>.</small>
+          </div>
+
+          <div class="connection-field firebase-field">
+            <div class="connection-label-row">
+              <label for="firebaseServidorSelecionado">Firebase do servidor</label>
+              <span class="connection-badge">Banco</span>
+            </div>
+
+            <div class="secret-input-wrap secret-input-actions">
+              <input
+                id="firebaseServidorSelecionado"
+                type="password"
+                placeholder="https://seu-projeto-default-rtdb.firebaseio.com/"
+                spellcheck="false"
+                readonly
+                aria-label="URL do Firebase do servidor"
+              >
+
+              <div class="secret-action-buttons">
+                <button
+                  id="botaoOlhoFirebase"
+                  class="secret-toggle"
+                  type="button"
+                  aria-label="Mostrar URL do Firebase"
+                  aria-pressed="false"
+                  title="Mostrar URL do Firebase"
+                >
+                  <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                    <circle cx="12" cy="12" r="2.5"></circle>
+                  </svg>
+                  <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 3l18 18"></path>
+                    <path d="M10.6 6.2A10.7 10.7 0 0 1 12 6c6.5 0 10 6 10 6a16.6 16.6 0 0 1-3 3.7"></path>
+                    <path d="M6.2 6.2C3.5 8.1 2 12 2 12s3.5 6 10 6a10.8 10.8 0 0 0 3.2-.5"></path>
+                  </svg>
+                </button>
+
+                <button
+                  id="botaoEditarFirebase"
+                  class="edit-secret-button"
+                  type="button"
+                  aria-label="Editar URL do Firebase"
+                  title="Editar URL do Firebase"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <small>A URL fica ofuscada. Use o olho para visualizar ou o lápis para trocar o banco.</small>
+          </div>
+
+          <div class="connection-actions connection-actions-info">
+            <span>Use o <b>lápis</b> para editar cada informação separadamente.</span>
+            <div id="mensagemConexaoServidor" class="message hidden"></div>
+          </div>
+        </section>
+
+        <nav class="config-tabs" aria-label="Configurações do servidor">
+          <button class="config-tab" data-config="gerais" type="button">⚙ Configurações</button>
+          <button class="config-tab" data-config="eventos" type="button">◫ Eventos</button>
+          <button class="config-tab" data-config="admins" type="button">♟ Admins</button>
+          <button class="config-tab" data-config="checklist" type="button">✓ CheckList</button>
+          <button class="config-tab" data-config="bloqueios" type="button">✕ Bloqueios</button>
+        </nav>
+
+        <div id="configInicial" class="content-card config-placeholder">
+          <div class="empty-icon">⚙</div>
+          <strong>Escolha uma configuração</strong>
+          <span>Configurações, Eventos, Admins, CheckList e Bloqueios pertencem somente ao servidor selecionado acima.</span>
+        </div>
+
+        <!-- CONFIGURAÇÕES GERAIS -->
+        <section id="config-gerais" class="config-panel content-card hidden">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">CONFIGURAÇÕES DO SERVIDOR</p>
+              <h3>Configurações</h3>
+              <p class="muted">Defina as regras básicas deste servidor.</p>
+            </div>
+            <span class="section-badge">Servidor selecionado</span>
+          </div>
+
+          <div class="split-layout">
+            <form id="formConfiguracoes" class="sub-card" autocomplete="off">
+              <div class="sub-card-title">
+                <strong>Regras do servidor</strong>
+                <span>Defina visão, modo de jogo, zumbis, spawn, checklist e senha</span>
+              </div>
+
+              <div class="field">
+                <label for="tipoVisao">Tipo de visão</label>
+                <select id="tipoVisao" required>
+                  <option value="PrimeiraPessoa">Somente primeira pessoa</option>
+                  <option value="TerceiraPessoa">Terceira pessoa</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="tempoSpawnItens">Tempo de spawn de itens</label>
+                <div class="input-with-suffix">
+                  <input id="tempoSpawnItens" type="number" min="1" max="1440" step="1" value="10" required>
+                  <span>minutos</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="checkListMembros">Check List Membros</label>
+                <select id="checkListMembros" required>
+                  <option value="false">Desativada</option>
+                  <option value="true">Ativada</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="modoZumbis">Zumbis</label>
+                <select id="modoZumbis" required>
+                  <option value="true">Com zumbis</option>
+                  <option value="false">Sem zumbis</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="modoJogo">Modo de jogo</label>
+                <select id="modoJogo" required>
+                  <option value="PVP">PvP</option>
+                  <option value="PVE">PvE</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="modoSenha">Acesso por senha</label>
+                <select id="modoSenha" required>
+                  <option value="false">Sem senha</option>
+                  <option value="true">Necessita senha</option>
+                </select>
+                <small>Escolha se o servidor exige senha para entrar.</small>
+              </div>
+
+              <div id="grupoSenhaConfiguracao" class="field hidden">
+                <label for="senhaServidor">Senha do servidor</label>
+                <input id="senhaServidor" type="text" minlength="4" maxlength="32" autocomplete="off" placeholder="Digite uma senha de 4 a 32 caracteres">
+                <small id="ajudaSenhaConfiguracao">A senha fica visível enquanto você cria ou redefine. Se já existir uma senha, digite outra somente se quiser trocá-la.</small>
+              </div>
+
+              <button class="button primary large full" type="submit">Salvar configurações</button>
+              <div id="mensagemConfiguracoes" class="message hidden"></div>
+            </form>
+
+            <div class="sub-card">
+              <div class="sub-card-title">
+                <strong>Configuração atual</strong>
+                <span>Dados carregados do Firebase deste servidor</span>
+              </div>
+              <div id="estadoConfiguracoes" class="empty-state compact-state">
+                <div class="empty-icon">⚙</div>
+                <strong>Não configurado</strong>
+                <span>Escolha o tipo de visão, modo de jogo, zumbis, spawn, checklist e senha.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- EVENTOS -->
+        <section id="config-eventos" class="config-panel content-card hidden">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">EVENTOS DO SERVIDOR</p>
+              <h3>Helicrash</h3>
+              <p class="muted">Configure o intervalo de spawn do Helicrash neste servidor.</p>
+            </div>
+            <span class="section-badge">Servidor selecionado</span>
+          </div>
+
+          <div class="split-layout">
+            <form id="formEvento" class="sub-card" autocomplete="off">
+              <div class="sub-card-title">
+                <strong>Configuração do Helicrash</strong>
+                <span>Escolha o intervalo desejado</span>
+              </div>
+
+              <div class="field">
+                <label for="tempoHelicrash">Tempo de spawn</label>
+                <select id="tempoHelicrash" required>
+                  <option value="5">A cada 5 minutos</option>
+                  <option value="10">A cada 10 minutos</option>
+                  <option value="20">A cada 20 minutos</option>
+                </select>
+              </div>
+
+              <button class="button primary large full" type="submit">Salvar Helicrash</button>
+              <div id="mensagemEvento" class="message hidden"></div>
+            </form>
+
+            <div class="sub-card">
+              <div class="sub-card-title">
+                <strong>Configuração atual</strong>
+                <span>Dados salvos no Firebase deste servidor</span>
+              </div>
+              <div id="estadoHelicrash" class="empty-state compact-state">
+                <div class="empty-icon">◫</div>
+                <strong>Não configurado</strong>
+                <span>Escolha 5, 10 ou 20 minutos.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMINS -->
+        <section id="config-admins" class="config-panel content-card hidden">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">CONTROLE DE ACESSO</p>
+              <h3>Admins do servidor</h3>
+              <p class="muted">Os nicks pertencem somente ao servidor selecionado.</p>
+            </div>
+            <span class="section-badge">Servidor selecionado</span>
+          </div>
+
+          <div class="split-layout admins-layout">
+            <form id="formAdmin" class="sub-card" autocomplete="off">
+              <div class="sub-card-title">
+                <strong>Adicionar administrador</strong>
+                <span>Cadastre somente o nick</span>
+              </div>
+
+              <div class="field">
+                <label for="nomeAdmin">Nick do admin</label>
+                <input id="nomeAdmin" maxlength="60" type="text" placeholder="Ex.: CarlosADM" required>
+              </div>
+
+              <button class="button primary large full" type="submit">Adicionar admin</button>
+              <div id="mensagemAdmin" class="message hidden"></div>
+            </form>
+
+            <div class="sub-card">
+              <div class="sub-card-title list-title-row">
+                <div>
+                  <strong>Admins cadastrados</strong>
+                  <span>Dados salvos no Firebase deste servidor</span>
+                </div>
+                <span id="contadorAdmins" class="count-badge">0</span>
+              </div>
+              <div id="listaAdmins" class="items-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CHECKLIST DE MEMBROS -->
+        <section id="config-checklist" class="config-panel content-card hidden">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">LISTA DE ENTRADA</p>
+              <h3>CheckList</h3>
+              <p class="muted">Adicione os nicks que poderão entrar quando a Check List Membros estiver ativada.</p>
+            </div>
+            <span class="section-badge">Servidor selecionado</span>
+          </div>
+
+          <div class="split-layout admins-layout">
+            <form id="formChecklist" class="sub-card" autocomplete="off">
+              <div class="sub-card-title">
+                <strong>Adicionar membro</strong>
+                <span>Cadastre o nick permitido</span>
+              </div>
+
+              <div class="field">
+                <label for="nomeChecklist">Nick do membro</label>
+                <input id="nomeChecklist" maxlength="40" type="text" placeholder="Ex.: Player123" required>
+              </div>
+
+              <button class="button primary large full" type="submit">Adicionar à CheckList</button>
+              <div id="mensagemChecklist" class="message hidden"></div>
+            </form>
+
+            <div class="sub-card">
+              <div class="sub-card-title list-title-row">
+                <div>
+                  <strong>Membros permitidos</strong>
+                  <span>Dados salvos no Firebase deste servidor</span>
+                </div>
+                <span id="contadorChecklist" class="count-badge">0</span>
+              </div>
+              <div id="listaChecklist" class="items-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- BLOQUEIOS -->
+        <section id="config-bloqueios" class="config-panel content-card hidden">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">JOGADORES BLOQUEADOS</p>
+              <h3>Bloqueios</h3>
+              <p class="muted">Lista carregada diretamente do nó BLOQUEIOS deste servidor.</p>
+            </div>
+            <span class="section-badge">Servidor selecionado</span>
+          </div>
+
+          <div class="sub-card bloqueios-card">
+            <div class="sub-card-title list-title-row">
+              <div>
+                <strong>Jogadores bloqueados</strong>
+                <span>Clique no X vermelho para retirar o bloqueio</span>
+              </div>
+              <span id="contadorBloqueios" class="count-badge">0</span>
+            </div>
+            <div id="mensagemBloqueios" class="message hidden"></div>
+            <div id="listaBloqueios" class="items-list"></div>
+          </div>
+        </section>
+
+      </section>
+    </section>
+
+
+    <div id="modalPagamentoMercadoPago" class="mp-payment-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloPagamentoMercadoPago">
+      <div class="mp-payment-backdrop" data-fechar-pagamento></div>
+      <section class="mp-checkout-panel">
+        <header class="mp-checkout-header">
+          <div class="mp-product-info">
+            <div class="mp-product-icon" aria-hidden="true">H</div>
+            <div>
+              <span class="mp-secure-label">CHECKOUT SEGURO</span>
+              <h3 id="tituloPagamentoMercadoPago">HOSPEDAGEM MENSAL</h3>
+              <p>30 dias de hospedagem para 1 servidor nesta conta.</p>
+            </div>
+          </div>
+          <div class="mp-checkout-prices">
+            <span id="precoOriginalModalMercadoPago" class="mp-original-price hidden">R$ 0,50</span>
+            <strong id="precoModalMercadoPago" class="mp-checkout-price">R$ 0,50</strong>
+          </div>
+          <button id="botaoFecharPagamentoMercadoPago" class="mp-checkout-close" type="button" aria-label="Fechar">×</button>
+        </header>
+
+        <div id="areaEscolhaPagamento" class="mp-checkout-body">
+          <section class="affiliate-code-box" aria-label="Código de afiliado">
+            <div class="affiliate-code-heading">
+              <div>
+                <strong>Código de afiliado</strong>
+                <span>Opcional • aplique antes de escolher Pix ou cartão</span>
+              </div>
+              <span class="affiliate-code-tag">DESCONTO</span>
+            </div>
+            <div class="affiliate-code-row">
+              <input id="codigoAfiliadoMercadoPago" type="text" maxlength="40" autocomplete="off" placeholder="Ex.: JOAO123">
+              <button id="botaoAplicarCodigoAfiliado" class="button ghost" type="button">Aplicar</button>
+            </div>
+            <div id="resumoCodigoAfiliado" class="affiliate-code-applied hidden">
+              <span>✓ Código <b id="codigoAfiliadoAplicado">—</b> aplicado</span>
+              <strong id="descontoAfiliadoAplicado">0% de desconto</strong>
+            </div>
+            <div id="mensagemCodigoAfiliado" class="message hidden"></div>
+          </section>
+
+          <div class="mp-methods-box">
+            <button id="opcaoCartaoMercadoPago" class="mp-method-row" type="button" data-metodo="card">
+              <span class="mp-radio-dot" aria-hidden="true"></span>
+              <span class="mp-method-icon mp-card-icon" aria-hidden="true">▭</span>
+              <span class="mp-method-copy">
+                <strong>Cartão de crédito</strong>
+                <small>Parcelamento disponível</small>
+              </span>
+            </button>
+
+            <div id="detalhesCartaoMercadoPago" class="mp-method-details hidden">
+              <form id="formCheckoutMercadoPago" autocomplete="on">
+                <div class="mp-card-grid">
+                  <label class="mp-pay-field mp-full-field">
+                    <span>Número do cartão</span>
+                    <div id="form-checkout__cardNumber" class="mp-sdk-field"></div>
+                  </label>
+                  <label class="mp-pay-field">
+                    <span>Validade</span>
+                    <div id="form-checkout__expirationDate" class="mp-sdk-field"></div>
+                  </label>
+                  <label class="mp-pay-field">
+                    <span>CVV</span>
+                    <div id="form-checkout__securityCode" class="mp-sdk-field"></div>
+                  </label>
+                  <label class="mp-pay-field mp-full-field">
+                    <span>Nome no cartão</span>
+                    <input id="form-checkout__cardholderName" type="text" autocomplete="cc-name" placeholder="Nome como está no cartão">
+                  </label>
+                  <label class="mp-pay-field">
+                    <span>Banco emissor</span>
+                    <select id="form-checkout__issuer"></select>
+                  </label>
+                  <label class="mp-pay-field">
+                    <span>Parcelas</span>
+                    <select id="form-checkout__installments"></select>
+                  </label>
+                  <label class="mp-pay-field">
+                    <span>Documento</span>
+                    <select id="form-checkout__identificationType"></select>
+                  </label>
+                  <label class="mp-pay-field">
+                    <span>Número do documento</span>
+                    <input id="form-checkout__identificationNumber" type="text" inputmode="numeric" placeholder="CPF">
+                  </label>
+                  <label class="mp-pay-field mp-full-field">
+                    <span>E-mail</span>
+                    <input id="form-checkout__cardholderEmail" type="email" autocomplete="email" placeholder="seuemail@exemplo.com">
+                  </label>
+                </div>
+              </form>
+            </div>
+
+            <button id="opcaoPixMercadoPago" class="mp-method-row" type="button" data-metodo="pix">
+              <span class="mp-radio-dot" aria-hidden="true"></span>
+              <span class="mp-method-icon mp-pix-icon" aria-hidden="true">◇</span>
+              <span class="mp-method-copy">
+                <strong>Pix</strong>
+              </span>
+            </button>
+
+            <div id="detalhesPixMercadoPago" class="mp-method-details hidden">
+              <div class="mp-pix-form-copy">
+                <strong>Insira o e-mail para gerar o código Pix</strong>
+                <p>Após gerar o Pix, conclua o pagamento pelo aplicativo do seu banco.</p>
+              </div>
+              <label class="mp-pay-field mp-full-field" for="emailPixMercadoPago">
+                <span>E-mail</span>
+                <input id="emailPixMercadoPago" type="email" autocomplete="email" placeholder="seuemail@exemplo.com">
+              </label>
+              <div class="mp-pix-note">ⓘ O Pix pode possuir limites definidos pelo seu banco.</div>
+            </div>
+          </div>
+
+          <button id="botaoPagarMercadoPago" class="mp-pay-button" type="button" disabled>▣&nbsp;&nbsp;Pagar</button>
+          <div id="mensagemModalMercadoPago" class="message hidden"></div>
+        </div>
+
+        <section id="resultadoPixMercadoPago" class="mp-pix-result hidden">
+          <div class="mp-pix-title">
+            <strong>PIX GERADO</strong>
+            <span>Pague o Pix e mantenha esta janela aberta. Assim que o pagamento for confirmado, sua hospedagem será liberada.</span>
+          </div>
+          <div class="mp-pix-result-grid">
+            <img id="qrCodePixMercadoPago" class="mp-pix-qr hidden" alt="QR Code Pix">
+            <div class="mp-pix-code-side">
+              <textarea id="codigoPixMercadoPago" readonly rows="4" aria-label="Pix Copia e Cola"></textarea>
+              <button id="botaoCopiarPixMercadoPago" class="mp-copy-pix-button" type="button">COPIAR PIX</button>
+            </div>
+          </div>
+          <div class="mp-pix-waiting">Aguardando pagamento...</div>
+          <div id="mensagemPixMercadoPago" class="message hidden"></div>
+        </section>
+      </section>
+    </div>
+
+    <div id="modalEditarConexao" class="editor-modal hidden" role="dialog" aria-modal="true" aria-labelledby="tituloModalEditarConexao">
+      <div class="editor-modal-backdrop" data-fechar-editor-conexao></div>
+      <section class="editor-modal-card">
+        <div class="editor-modal-header">
+          <div>
+            <p class="eyebrow">EDITAR CONEXÃO</p>
+            <h3 id="tituloModalEditarConexao">Editar</h3>
+            <p id="descricaoModalEditarConexao" class="muted"></p>
+          </div>
+          <button id="botaoFecharModalConexao" class="editor-modal-close" type="button" aria-label="Fechar">×</button>
+        </div>
+
+        <form id="formEditarConexao" autocomplete="off">
+          <div class="field">
+            <label id="labelNovoValorConexao" for="novoValorConexao">Novo valor</label>
+            <div class="secret-input-wrap modal-secret-wrap">
+              <input id="novoValorConexao" type="text" spellcheck="false" required>
+              <button id="botaoOlhoNovoValor" class="secret-toggle modal-eye hidden" type="button" aria-label="Mostrar ou ocultar valor" title="Mostrar ou ocultar valor">
+                <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                  <circle cx="12" cy="12" r="2.5"></circle>
+                </svg>
+                <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 3l18 18"></path>
+                  <path d="M10.6 6.2A10.7 10.7 0 0 1 12 6c6.5 0 10 6 10 6a16.6 16.6 0 0 1-3 3.7"></path>
+                  <path d="M6.2 6.2C3.5 8.1 2 12 2 12s3.5 6 10 6a10.8 10.8 0 0 0 3.2-.5"></path>
+                </svg>
+              </button>
+            </div>
+            <small id="ajudaNovoValorConexao"></small>
+          </div>
+
+          <div id="mensagemModalConexao" class="message hidden"></div>
+
+          <div id="opcoesTransferenciaFirebase" class="transfer-choice hidden">
+            <div class="transfer-choice-icon">↔</div>
+            <div class="transfer-choice-copy">
+              <strong>Deseja transferir os dados do antigo servidor para este novo Firebase?</strong>
+              <span>O banco antigo não será apagado. Ao transferir, os dados antigos serão copiados para a nova URL antes da troca.</span>
+            </div>
+          </div>
+
+          <div class="editor-modal-actions">
+            <button id="botaoCancelarEdicaoConexao" class="button ghost" type="button">Cancelar</button>
+            <button id="botaoSalvarEdicaoConexao" class="button primary" type="submit">Salvar</button>
+            <button id="botaoMudarSemTransferir" class="button ghost hidden" type="button">Mudar sem transferir</button>
+            <button id="botaoMudarETransferir" class="button primary hidden" type="button">Mudar e transferir</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <footer>DayZombi — Hospedagem de Servidores</footer>
+  </main>
+
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
